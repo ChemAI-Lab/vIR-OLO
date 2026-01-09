@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "virolo"
+version = "1.0.0"
+description = "A PyQt5-based spectral image annotation tool"
+dependencies = [
+    "PyQt5",
+    "Pillow", 
+    "opencv-python",
+    "numpy",
+    "PyYAML",
+    "huggingface_hub",
+]

@@ -1,0 +1,361 @@
+''' The main integration of GUI with the utilities and auxiliary files needed to run spectrAI'''
+
+from ui.main_ui import Ui_MainWindow
+from tools.image_loader import ImageManager
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QColorDialog, QMessageBox, QShortcut, QHBoxLayout
+from PyQt5 import QtGui, QtCore
+from constants import *
+from tools.donwload_default_models import ModelManager
+import os
+import json
+import yaml
+import shutil
+import time
+class App(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.setWindowTitle("vIR-OLO v.1.0.0")
+        # Add a resize timer to prevent too frequent updates
+        self.resize_timer = QtCore.QTimer()
+        self.resize_timer.setSingleShot(True)
+        self.resize_timer.timeout.connect(self.handle_delayed_resize)
+        # setup the File Menu actions and buttons
+        self.ui.actionNew.triggered.connect(self.create_new_project)
+        self.ui.actionLoad.triggered.connect(self.load_existing_project)
+        self.shortcut_new = QShortcut(QtGui.QKeySequence("Ctrl+N"), self)
+        self.shortcut_new.activated.connect(self.create_new_project)
+        self.shortcut_load = QShortcut(QtGui.QKeySequence("Ctrl+L"), self)
+        self.shortcut_load.activated.connect(self.load_existing_project)
+        self.ui.actionDownloadDefaultModels.triggered.connect(self.wrapper_default_downloader)
+        # connect buttons to specific functions
+        self.ui.openBtn.clicked.connect(self.open_images_folder)
+        self.ui.prevBtn.clicked.connect(lambda: self.change_image('-'))
+        self.ui.nextBtn.clicked.connect(lambda: self.change_image('+'))
+        # preload the image manager
+        self.image_manager = None
+        self.model_manager = ModelManager()
+        
+        # Store edit icon for later use
+        self.icon_editLabel = QtGui.QIcon()
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui", "icons", "editLabel_icon.png")
+        self.icon_editLabel.addPixmap(QtGui.QPixmap(icon_path), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        
+    
+    def wrapper_default_downloader(self):
+        """Wrapper method to handle the download of default models"""
+        if config.get("PROJECT_LOADED", False):
+            root_path = config.get("ROOT")
+            if root_path:
+                # show a message in the statusbar
+                self.statusBar().showMessage("Downloading models, please wait...")
+                # force the status bar to update
+                QApplication.processEvents()
+
+                success = self.model_manager.download_default_models(root_path)
+                if success:
+                    QMessageBox.information(self, "Download Models", "Default models downloaded successfully!")
+                    self.statusBar().clearMessage()
+                    
+                    # Read existing config
+                    json_file_path = os.path.join(config["ROOT"], "config.json")
+                    with open(json_file_path, "r") as json_file:
+                        config_data = json.load(json_file)
+                    
+                    # Update with model paths
+                    config_data["MODEL_PATHS"] = self.model_manager.model_paths
+                    
+                    # Write back the complete config if models were downloaded
+                    if len(self.model_manager.model_paths) > 0:
+                        with open(json_file_path, "w") as json_file:
+                            json.dump(config_data, json_file, indent=2)
+                    # Update the dropdown list
+                    self.list_models_in_dropdown()
+            else:
+                QMessageBox.warning(self, "Download Models", "Project root path not set!")
+        else:
+            QMessageBox.warning(self, "Download Models", "Please load or create a project first!")
+            
+    def resizeEvent(self, event):
+        """Override the resize event to handle window resizing"""
+        super().resizeEvent(event)
+        # Start or restart the timer
+        self.resize_timer.start(150)  # 150ms delay
+
+    def handle_delayed_resize(self):
+        """Handle the resize event after a short delay to prevent excessive updates"""
+        if self.image_manager and self.image_manager.current_image:
+            self.image_manager.render(self.ui.spectroPanel)
+        
+    def initialize_image_manager(self):
+        '''
+        Initialize the ImageManager and pass the paths from the config dictionary: 
+        IMAGES_PATH and ANNOTATIONS_PATH
+        '''
+        self.image_manager = ImageManager(images_path=config.get("IMAGES_PATH", ""),
+                                          annotations_path=config.get("ANNOTATIONS_PATH", ""))
+        self.image_manager.render(self.ui.spectroPanel)
+        print("attempted render of image")
+        
+    def open_images_folder(self):
+        '''
+        When button pressed, open the folder specified in the config["IMAGES_PATH"]
+        '''
+        images_path = config.get("IMAGES_PATH", "")
+        if images_path:
+            os.startfile(images_path)
+        else:
+            QMessageBox.warning(self, "Open Images Folder", "Images folder path is not set. Create or load a new project first!")
+    
+    def get_labels_from_yaml(self, project_folder):
+        '''
+        Read the dataset.yaml file and extract labels, storing them in config["LABELS"]
+        '''
+        dataset_yaml_path = os.path.join(project_folder, "dataset.yaml")
+        
+        if os.path.exists(dataset_yaml_path):
+            try:
+                with open(dataset_yaml_path, 'r') as file:
+                    dataset_config = yaml.safe_load(file)
+                
+                # Extract names and convert to ordered list
+                names_dict = dataset_config.get('names', {})
+                
+                # Sort by index and extract labels
+                sorted_labels = []
+                for i in sorted(names_dict.keys()):
+                    sorted_labels.append(names_dict[i])
+                
+                config["LABELS"] = sorted_labels
+                return True
+                
+            except Exception as e:
+                QMessageBox.warning(self, "Load Labels", f"Error reading dataset.yaml: {str(e)}")
+                return False
+        else:
+            QMessageBox.warning(self, "Load Labels", "dataset.yaml file not found in project folder.")
+            return False
+    
+    def update_label_buttons(self):
+        '''
+        Update the label buttons in the UI based on config["LABELS"]
+        '''
+        if "LABELS" not in config or not config["LABELS"]:
+            return
+        
+        # Clear existing layouts in the scroll area
+        scroll_widget = self.ui.scrollAreaWidgetContents
+        layout = scroll_widget.layout()
+        
+        # Remove all existing widgets from the layout
+        if layout:
+            while layout.count():
+                child = layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+                elif child.layout():
+                    self.clear_layout(child.layout())
+        
+        # Create new button groups for each label
+        for i, label_name in enumerate(config["LABELS"]):
+            # Create horizontal layout for this label
+            label_layout = QHBoxLayout()
+            label_layout.setObjectName(f"label{i+1}_Layout")
+            
+            # Create main label button
+            label_button = QPushButton(scroll_widget)
+            label_button.setMinimumSize(QtCore.QSize(0, 30))
+            font = QtGui.QFont()
+            font.setFamily("Oswald")
+            label_button.setFont(font)
+            label_button.setText(label_name)
+            label_button.setObjectName(f"labelButton_{i}")
+            label_layout.addWidget(label_button)
+            
+            # Create edit button
+            edit_button = QPushButton(scroll_widget)
+            edit_button.setMinimumSize(QtCore.QSize(0, 30))
+            edit_button.setStyleSheet("background-color: rgb(178, 188, 178);")
+            edit_button.setText("")
+            edit_button.setIcon(self.icon_editLabel)
+            edit_button.setObjectName(f"editButton_{i}")
+            label_layout.addWidget(edit_button)
+            
+            # Set stretch to make label button take more space
+            label_layout.setStretch(0, 1)
+            
+            # Add layout to the main vertical layout
+            layout.addLayout(label_layout)
+    
+    def clear_layout(self, layout):
+        '''
+        Helper method to recursively clear a layout
+        '''
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+            elif child.layout():
+                self.clear_layout(child.layout())
+                
+    def list_models_in_dropdown(self):
+        '''
+        Populate the model selection dropdown with available models from model_manager
+        '''
+        if not self.model_manager.model_paths:
+            return
+        
+        self.ui.modelDropdown.clear()  # Clear existing items
+        for model in self.model_manager.model_paths:
+            model_name = model.get("name", "Unnamed Model")
+            self.ui.modelDropdown.addItem(model_name)
+            
+    def load_existing_project(self):
+        '''
+        Open the File Manager to select a folder that already contains a configuration file.
+        If the configuration file is found, load it and store the path to the images in the constants.config dictionary
+        Otherwise show a warning message to the user, suggesting to create a new project because config file wasn't found
+        '''
+        folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Project Folder")
+        if folder_path:
+            # check if config file exists in the selected folder
+            json_file_path = os.path.join(folder_path, "config.json")
+            
+            if os.path.exists(json_file_path):
+                with open(json_file_path, "r") as json_file:
+                    config_data = json.load(json_file)
+                    config["IMAGES_PATH"] = config_data.get("IMAGES_PATH", "")
+                    config["ANNOTATIONS_PATH"] = config_data.get("ANNOTATIONS_PATH", "")
+                    config["ROOT"] = config_data.get("ROOT", "")
+                    self.model_manager.model_paths = config_data.get("MODEL_PATHS", [])
+                    # if both images path and annotation path are found, show success message
+                    if config["IMAGES_PATH"] and config["ANNOTATIONS_PATH"]:
+                        # Load labels from dataset.yaml and update buttons
+                        if self.get_labels_from_yaml(folder_path):
+                            self.update_label_buttons()
+                        
+                        QMessageBox.information(self, "Load Project", f"Project loaded successfully!\nImages Path: {config['IMAGES_PATH']}\nAnnotations Path: {config['ANNOTATIONS_PATH']}")
+                    else:
+                        QMessageBox.warning(self, "Load Project", "Configuration file is missing required paths. Please create a new project.")
+                        return
+                    config["PROJECT_LOADED"] = True
+                    # if models paths are found, call the list_models_in_dropdown function
+                    if self.model_manager.model_paths:
+                        self.list_models_in_dropdown()
+                    # Initialize the image manager with the loaded paths
+                    self.initialize_image_manager()
+            else:
+                QMessageBox.warning(self, "Load Project", "No configuration file found. Please create a new project.")
+
+    def create_new_project(self):
+        '''
+        Open the File manager to select a folder.
+        The location of the folder will be stored by the constants.config dictionary
+        All the images found in the folder will be moved into a new subfolder called "images"
+        A new subfolder next to the "images" folder will be created called "annotations"
+        A new .json file will be created that will be found and loaded when the sibling to this
+        function load_new_project() is called
+        '''
+        folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Project Folder")
+        success = False
+        if folder_path:
+            # Create YOLO dataset structure
+            # Create main directories
+            images_folder = os.path.join(folder_path, "images")
+            labels_folder = os.path.join(folder_path, "labels")
+            
+            # Check if directories already exist
+            if os.path.exists(images_folder) or os.path.exists(labels_folder):
+                QMessageBox.warning(self, "New Project", f"The project structure already exists in this folder. Please choose another location or delete the existing folders.")
+                return
+            
+            # Create images subdirectories
+            images_train_folder = os.path.join(images_folder, "train")
+            images_val_folder = os.path.join(images_folder, "val")
+            os.makedirs(images_train_folder, exist_ok=True)
+            os.makedirs(images_val_folder, exist_ok=True)
+            
+            # Create labels subdirectories
+            labels_train_folder = os.path.join(labels_folder, "train")
+            labels_val_folder = os.path.join(labels_folder, "val")
+            os.makedirs(labels_train_folder, exist_ok=True)
+            os.makedirs(labels_val_folder, exist_ok=True)
+            
+            # Move all images from the selected folder to the train subfolder
+            for file_name in os.listdir(folder_path):
+                if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif')):
+                    source = os.path.join(folder_path, file_name)
+                    destination = os.path.join(images_train_folder, file_name)
+                    os.rename(source, destination)
+            
+            # Set config paths to the train folders
+            config["IMAGES_PATH"] = images_train_folder
+            config["ANNOTATIONS_PATH"] = labels_train_folder
+            config["ROOT"] = folder_path
+            # Create a new .json file
+            json_file_path = os.path.join(folder_path, "config.json")
+            with open(json_file_path, "w") as json_file:
+                # save the location of the images and labels train folders
+                json.dump({
+                    "IMAGES_PATH": images_train_folder, 
+                    "ANNOTATIONS_PATH": labels_train_folder,
+                    "ROOT": folder_path,
+                }, json_file, indent=2)
+            
+            # Create a copy of dataset.yaml, found next to this script in the src folder
+            import shutil
+            import yaml
+            
+            # Get the path to the source dataset.yaml file
+            src_dir = os.path.dirname(os.path.abspath(__file__))
+            source_dataset_yaml = os.path.join(src_dir, "dataset.yaml")
+            
+            if os.path.exists(source_dataset_yaml):
+                # Read the original dataset.yaml
+                with open(source_dataset_yaml, 'r') as file:
+                    dataset_config = yaml.safe_load(file)
+                
+                # Update the path to point to the new project folder
+                dataset_config['path'] = folder_path
+                
+                # Create the destination dataset.yaml file
+                dest_dataset_yaml = os.path.join(folder_path, "dataset.yaml")
+                with open(dest_dataset_yaml, 'w') as file:
+                    yaml.dump(dataset_config, file, default_flow_style=False, sort_keys=False)
+                
+                # Load labels from the created dataset.yaml and update buttons
+                if self.get_labels_from_yaml(folder_path):
+                    self.update_label_buttons()
+                
+            success = True
+        # Let the user know the process is done with success
+        if success:
+            QMessageBox.information(self, "New Project", f"New project created at: {folder_path}")
+            config["PROJECT_LOADED"] = True
+            self.initialize_image_manager()
+        else:
+            QMessageBox.warning(self, "New Project", "No folder selected. Project creation cancelled.")
+    
+    def change_image(self, sign:str = '+'):
+        '''
+        Load the previous image in the list
+        '''
+        if config["PROJECT_LOADED"]:
+            # update the index and call render again
+            if sign == '+':
+                self.image_manager.next_image()
+            else:
+                self.image_manager.previous_image()
+            self.image_manager.render(self.ui.spectroPanel)
+
+if __name__ == "__main__":
+    import sys
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = App()
+    MainWindow.show()
+    sys.exit(app.exec_())
