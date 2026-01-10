@@ -32,6 +32,9 @@ class ImageManager():
         self.scale_y = 1.0
         self.offset_x = 0
         self.offset_y = 0
+        # Track scaled image dimensions in widget space
+        self.scaled_width = 0
+        self.scaled_height = 0
 
     def load_image(self):
         """
@@ -125,12 +128,15 @@ class ImageManager():
         self.original_width = pixmap.width()
         self.original_height = pixmap.height()
         
-        # Scale it using fit_to_window
-        scaled_pixmap = self.fit_to_window(width, height, pixmap)
+        # Scale it using fit_to_window with aspect ratio preserved
+        scaled_pixmap = self.fit_to_window(width, height, pixmap, stretch=False)
         
         # Calculate transformation data
         scaled_width = scaled_pixmap.width()
         scaled_height = scaled_pixmap.height()
+        # Persist scaled dimensions for strict bounds checks
+        self.scaled_width = scaled_width
+        self.scaled_height = scaled_height
         
         # Calculate scale ratios
         self.scale_x = scaled_width / self.original_width if self.original_width > 0 else 1.0
@@ -158,8 +164,9 @@ class ImageManager():
         relative_x = screen_x - self.offset_x
         relative_y = screen_y - self.offset_y
         
-        # Check bounds
-        if relative_x < 0 or relative_y < 0:
+        # Check bounds: reject clicks outside the scaled image content
+        if (relative_x < 0 or relative_y < 0 or
+            relative_x >= self.scaled_width or relative_y >= self.scaled_height):
             return None
         
         # Convert to original image coordinates using scale factors

@@ -116,6 +116,8 @@ class CanvasWidget(QLabel):
         
         # Enable mouse tracking to receive mouseMoveEvent even without button press
         self.setMouseTracking(True)
+        # Ensure the pixmap is centered so offsets computed in ImageManager match display
+        self.setAlignment(Qt.AlignCenter)
         
         # ==================== External References ====================
         # These are set by the parent application and provide access to required systems
@@ -477,11 +479,13 @@ class CanvasWidget(QLabel):
                 self.update()
             else:
                 # User clicked on empty space - start new box
+                # Convert initial click to IMAGE coordinates to keep preview consistent
+                img_coords = self.screen_to_image_coords(event.pos().x(), event.pos().y())
+                if img_coords is None:
+                    return
                 self.is_box_started = True
-                self.anchor_x = event.pos().x()
-                self.anchor_y = event.pos().y()
-                self.current_mouse_x = event.pos().x()
-                self.current_mouse_y = event.pos().y()
+                self.anchor_x, self.anchor_y = img_coords
+                self.current_mouse_x, self.current_mouse_y = img_coords
                 
                 # Deselect any previously selected box
                 for box in self.box_manager.get_all_boxes():
@@ -494,12 +498,11 @@ class CanvasWidget(QLabel):
             # Finalize the box with anchor and current position as corners
             self.is_box_started = False
             
-            # Convert both click positions to image coordinates
-            start_coords = self.screen_to_image_coords(self.anchor_x, self.anchor_y)
+            # Anchor is already stored in IMAGE coordinates
             end_coords = self.screen_to_image_coords(event.pos().x(), event.pos().y())
             
-            if start_coords and end_coords:
-                x1, y1 = start_coords
+            if end_coords:
+                x1, y1 = self.anchor_x, self.anchor_y
                 x2, y2 = end_coords
                 
                 # Normalize coordinates to ensure top-left is (x, y)
