@@ -13,15 +13,6 @@ nc: 12
 
 # Class names mapping (index: name)
 names:
-  0: aromatics
-  1: alcohols
-  2: amines
-  3: esters
-  4: alkene
-  5: carb. acids
-  6: ketones
-  7: phenol
-  8: nitriles
-  9: amides
-  10: aldehydes
-  11: alkyne
+  0: label0
+  1: label1
+  2: label2

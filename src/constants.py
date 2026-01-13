@@ -1,20 +1,20 @@
 # CD. ORIGINAL_LABELS
 # original_labels = List[str]
 # interp. A list of original labels for classification tasks.
-ORIG_LABELS = [
-    "aromatics",
-    "alcohols", 
-    "amines",
-    "esters",
-    "alkene",
-    "carb. acids",
-    "ketones",
-    "phenol",
-    "nitriles",
-    "amides",
-    "aldehydes",
-    "alkyne"
-]
+# ORIG_LABELS = [
+#     "aromatics",
+#     "alcohols", 
+#     "amines",
+#     "esters",
+#     "alkene",
+#     "carb. acids",
+#     "ketones",
+#     "phenol",
+#     "nitriles",
+#     "amides",
+#     "aldehydes",
+#     "alkyne"
+# ]
 
 # DD. CONFIG_SETTINGS
 # config = {"IMAGES_PATH":str}
@@ -26,7 +26,7 @@ config = {
     "MODEL_PATHS": [],
     "LABELS": [],
     "MODE": "BOX",
-    "CURRENT_LABEL": 0
+    "CURRENT_LABEL": 1
 }
 
 

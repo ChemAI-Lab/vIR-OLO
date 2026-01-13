@@ -55,6 +55,18 @@ class App(QMainWindow):
         self.ui.trashBtn.setChecked(False)
         self.ui.trashBtn.toggled.connect(self.on_erase_mode_toggled)
         
+        # Setup update button (UPDATE mode) - checkable toggle
+        self.ui.updateBoxLabelBtn.setCheckable(True)
+        self.ui.updateBoxLabelBtn.setChecked(False)
+        self.ui.updateBoxLabelBtn.toggled.connect(self.on_update_mode_toggled)
+        
+        # Mode buttons dictionary for centralized mode switching
+        self.mode_buttons = {
+            "BOX": self.ui.editBtn,
+            "ERASE": self.ui.trashBtn,
+            "UPDATE": self.ui.updateBoxLabelBtn
+        }
+        
         # preload the image manager
         self.image_manager = None
         self.model_manager = ModelManager()
@@ -208,6 +220,8 @@ class App(QMainWindow):
             label_button.setFont(font)
             label_button.setText(label_name)
             label_button.setObjectName(f"labelButton_{i}")
+            label_button.setCheckable(True)
+            label_button.clicked.connect(lambda checked, idx=i: self.on_label_button_clicked(idx))
             label_layout.addWidget(label_button)
             
             # Create edit button
@@ -224,6 +238,38 @@ class App(QMainWindow):
             
             # Add layout to the main vertical layout
             layout.addLayout(label_layout)
+        
+        # Select first label by default
+        if config["LABELS"]:
+            self.on_label_button_clicked(0)
+    
+    def on_label_button_clicked(self, index: int):
+        '''
+        Handle label button click to set the current active label.
+        
+        Updates config["CURRENT_LABEL"] and provides visual feedback
+        by checking only the selected button.
+        
+        Args:
+            index (int): The index of the clicked label in config["LABELS"]
+        '''
+        config["CURRENT_LABEL"] = index
+        
+        # Update visual feedback - uncheck all, check only selected
+        scroll_widget = self.ui.scrollAreaWidgetContents
+        layout = scroll_widget.layout()
+        
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            if item.layout():  # It's a horizontal layout containing the buttons
+                h_layout = item.layout()
+                for j in range(h_layout.count()):
+                    widget = h_layout.itemAt(j).widget()
+                    if widget and widget.objectName().startswith("labelButton_"):
+                        btn_index = int(widget.objectName().split("_")[1])
+                        widget.setChecked(btn_index == index)
+        
+        print(f"Current label set to: {index} ({config['LABELS'][index]})")
     
     def clear_layout(self, layout):
         '''
@@ -412,51 +458,63 @@ class App(QMainWindow):
         button.setChecked(checked)
         button.blockSignals(False)
 
+    def _set_mode(self, mode: str):
+        '''
+        Centralized mode switching method.
+        
+        Sets the application mode and ensures mutual exclusivity between mode buttons.
+        Handles cleanup of in-progress states and resets box statuses.
+        
+        Args:
+            mode (str): The mode to switch to ("BOX", "ERASE", "UPDATE")
+        '''
+        config["MODE"] = mode
+        
+        # Uncheck all other mode buttons (mutual exclusivity)
+        for btn_mode, button in self.mode_buttons.items():
+            if btn_mode != mode:
+                self._set_button_checked_silent(button, False)
+        
+        # Cancel any in-progress box drawing
+        if self.ui.spectroPanel.is_box_started:
+            self.ui.spectroPanel.is_box_started = False
+        
+        # Reset all box statuses (clear hover highlighting)
+        for box in self.ui.spectroPanel.box_manager.get_all_boxes():
+            box.status = False
+        
+        # Set appropriate cursor
+        if mode == "BOX":
+            self.ui.spectroPanel.setCursor(Qt.CrossCursor)
+        else:
+            self.ui.spectroPanel.setCursor(Qt.ArrowCursor)
+        
+        self.ui.spectroPanel.update()
+
     def on_edit_mode_toggled(self, checked: bool):
         '''
         Toggle interaction mode to BOX (drawing) mode.
         When checked, sets mode to "BOX" enabling drawing on the canvas.
-        Ensures mutual exclusivity with ERASE mode.
         '''
         if checked:
-            config["MODE"] = "BOX"
-            # Uncheck trash button (mutual exclusivity)
-            self._set_button_checked_silent(self.ui.trashBtn, False)
-            # Set crosshair cursor for drawing
-            self.ui.spectroPanel.setCursor(Qt.CrossCursor)
-        else:
-            # If unchecked and trash is not checked, stay in current mode
-            if not self.ui.trashBtn.isChecked():
-                self.ui.spectroPanel.setCursor(Qt.ArrowCursor)
-        
-        # Cancel any in-progress preview when leaving BOX mode
-        if config["MODE"] != "BOX" and self.ui.spectroPanel.is_box_started:
-            self.ui.spectroPanel.is_box_started = False
-            self.ui.spectroPanel.update()
+            self._set_mode("BOX")
 
     def on_erase_mode_toggled(self, checked: bool):
         '''
         Toggle interaction mode to ERASE mode.
         When checked, sets mode to "ERASE" enabling deletion of boxes by clicking.
-        Ensures mutual exclusivity with BOX mode.
         '''
         if checked:
-            config["MODE"] = "ERASE"
-            # Uncheck edit button (mutual exclusivity)
-            self._set_button_checked_silent(self.ui.editBtn, False)
-            # Start with arrow cursor - will change to hand when hovering boxes
-            self.ui.spectroPanel.setCursor(Qt.ArrowCursor)
-            # Cancel any in-progress box drawing
-            if self.ui.spectroPanel.is_box_started:
-                self.ui.spectroPanel.is_box_started = False
-                self.ui.spectroPanel.update()
-        else:
-            # Clear hover state when leaving erase mode
-            # TODO: self.ui.spectroPanel.hovered_box_id = None
-            self.ui.spectroPanel.update()
-            # If unchecked and edit is not checked, set neutral cursor
-            if not self.ui.editBtn.isChecked():
-                self.ui.spectroPanel.setCursor(Qt.ArrowCursor)
+            self._set_mode("ERASE")
+
+    def on_update_mode_toggled(self, checked: bool):
+        '''
+        Toggle interaction mode to UPDATE mode.
+        When checked, sets mode to "UPDATE" enabling label changes on boxes by clicking.
+        Clicking a box will update its label_id to config["CURRENT_LABEL"].
+        '''
+        if checked:
+            self._set_mode("UPDATE")
 
 
 if __name__ == "__main__":

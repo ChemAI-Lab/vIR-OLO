@@ -133,7 +133,7 @@ class CanvasWidget(QLabel):
         
         # ==================== Label Selection ====================
         # Tracks which label class is assigned to new boxes
-        self.current_label_id = 0  # Index into config["LABELS"], defaults to first label
+        # self.current_label_id = 0  # Index into config["LABELS"], defaults to first label
         
         # ==================== Box Selection ====================
         # Tracks which (if any) box is currently selected by the user
@@ -202,30 +202,30 @@ class CanvasWidget(QLabel):
         self.labels = config.get("LABELS", [])
         self.update()  # Trigger paint event to refresh rendering
     
-    def set_current_label(self, label_id: int):
-        """
-        Set the label class for the next box to be created.
+    # def set_current_label(self, label_id: int):
+    #     """
+    #     Set the label class for the next box to be created.
         
-        When the user creates a new bounding box, it will be assigned this label ID.
-        This is typically called when the user clicks a label button in the UI.
+    #     When the user creates a new bounding box, it will be assigned this label ID.
+    #     This is typically called when the user clicks a label button in the UI.
         
-        Args:
-            label_id (int): Index into config["LABELS"] for the label to assign.
-                           Must be in range [0, len(config["LABELS"])).
+    #     Args:
+    #         label_id (int): Index into config["LABELS"] for the label to assign.
+    #                        Must be in range [0, len(config["LABELS"])).
         
-        Returns:
-            None
+    #     Returns:
+    #         None
         
-        Raises:
-            ValueError: If label_id is out of valid range (check not performed, 
-                       caller's responsibility).
+    #     Raises:
+    #         ValueError: If label_id is out of valid range (check not performed, 
+    #                    caller's responsibility).
         
-        Example:
-            >>> canvas.set_current_label(2)  # Next box will have label_id=2
-            >>> # User clicks twice to create box
-            # New box will be assigned to label at config["LABELS"][2]
-        """
-        self.current_label_id = label_id
+    #     Example:
+    #         >>> canvas.set_current_label(2)  # Next box will have label_id=2
+    #         >>> # User clicks twice to create box
+    #         # New box will be assigned to label at config["LABELS"][2]
+    #     """
+    #     self.current_label_id = label_id
     
     # =====================================================================
     # Coordinate Transformation Methods
@@ -468,6 +468,20 @@ class CanvasWidget(QLabel):
                 self.update()
             return
         
+        # ==================== UPDATE MODE: Click to Update Label ====================
+        if current_mode == "UPDATE":
+            # Find box under cursor using existing helper
+            idx, clicked_box = self._get_box_at_position(event.pos())
+            
+            if clicked_box:
+                # Update the box's label_id to the current selected label
+                new_label_id = config.get("CURRENT_LABEL", 0)
+                clicked_box.label_id = new_label_id
+                self.box_updated.emit(clicked_box.box_id)
+                print(f"Box updated: id={clicked_box.box_id}, new_label={new_label_id}")
+                self.update()
+            return
+        
         # ==================== BOX MODE ====================
         # Cancel in-progress preview if mode is not BOX
         if current_mode != "BOX":
@@ -520,7 +534,7 @@ class CanvasWidget(QLabel):
                 # Prevents accidental creation of tiny boxes
                 if width > 5 and height > 5:
                     # Create new bounding box in image coordinates
-                    box = BoundingBox(x, y, width, height, self.current_label_id)
+                    box = BoundingBox(x, y, width, height, config.get("CURRENT_LABEL"))
                     box.status = False  # New boxes are unselected by default
                     
                     # Add to manager and emit signal
@@ -528,7 +542,7 @@ class CanvasWidget(QLabel):
                     self.box_created.emit(box_id)
                     
                     # Debug output
-                    print(f"Box created: id={box_id}, x={x}, y={y}, w={width}, h={height}, label={self.current_label_id}")
+                    # print(f"Box created: id={box_id}, x={x}, y={y}, w={width}, h={height}, label={self.current_label_id}")
                 
                 self.update()
     
@@ -583,8 +597,8 @@ class CanvasWidget(QLabel):
         """
         current_mode = config.get("MODE")
         
-        # ==================== ERASE MODE: Hover Detection ====================
-        if current_mode == "ERASE":
+        # ==================== ERASE/UPDATE MODE: Hover Detection ====================
+        if current_mode in ("ERASE", "UPDATE"):
             # Find box under cursor using existing helper
             _,hovered_box = self._get_box_at_position(event.pos())
             
@@ -772,10 +786,11 @@ class CanvasWidget(QLabel):
         painter.setFont(font)
         
         # Get label name from config or fallback to label_id
-        if self.labels and 0 <= self.current_label_id < len(self.labels):
-            label_text = f"[{self.labels[self.current_label_id]}]"
+        curr_label_id = config.get("CURRENT_LABEL")
+        if self.labels and 0 <= curr_label_id < len(self.labels):
+            label_text = f"[{self.labels[curr_label_id]}]"
         else:
-            label_text = f"[Label {self.current_label_id}]"
+            label_text = f"[Label {curr_label_id}]"
         
         # Draw text near top-left corner of preview box
         painter.drawText(x + 4, y + 14, label_text)
