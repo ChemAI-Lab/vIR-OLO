@@ -34,7 +34,7 @@ class BoundingBox:
         self.y = y
         self.width = width
         self.height = height
-        self.label_id = config["CURRENT_LABEL"]
+        self.label_id = label_id
         self.box_id = box_id if box_id is not None else str(uuid.uuid4())
         self.status = False  # True if selected, False otherwise
     

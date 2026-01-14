@@ -301,16 +301,26 @@ class App(QMainWindow):
     def delete_label(self, idx: int):
         '''
         Delete a label at the given index.
-        
-        Updates config["LABELS"], rebuilds UI buttons, and saves to dataset.yaml.
-        
-        Args:
-            idx (int): The index of the label to delete
+        Prevents deletion if only one label remains.
         '''
+        if len(config["LABELS"]) <= 1:
+            QMessageBox.warning(
+                self,
+                "Cannot Delete Label",
+                "At least one label must remain in the project.\nAdd another label before deleting this one."
+            )
+            return
+        
         if idx < 0 or idx >= len(config["LABELS"]):
             return
         
-        deleted_name = config["LABELS"].pop(idx)
+        deleted_name = config["LABELS"][idx]
+        
+        # Update all annotation files BEFORE removing from config
+        removed_count, shifted_count = self.update_annotations_after_label_delete(idx)
+        
+        # Remove from config
+        config["LABELS"].pop(idx)
         
         # Update CURRENT_LABEL if needed
         if len(config["LABELS"]) == 0:
@@ -324,7 +334,115 @@ class App(QMainWindow):
         # Save to yaml
         self.save_labels_to_yaml()
         
+        # Reload annotations for current image to reflect changes
+        self.ui.spectroPanel.box_manager.clear()
+        self.load_annotations_for_current_image()
+        self.ui.spectroPanel.update()
+        
+        # Inform user
+        QMessageBox.information(
+            self,
+            "Label Deleted",
+            f"Label '{deleted_name}' (index {idx}) deleted.\n\n"
+            f"Annotations updated:\n"
+            f"  - {removed_count} boxes removed\n"
+            f"  - {shifted_count} boxes had their label index shifted"
+        )
+        
         print(f"Label '{deleted_name}' (index {idx}) deleted")
+
+    def update_annotations_after_label_delete(self, deleted_idx: int) -> tuple:
+        '''
+        Update all annotation files after a label is deleted.
+        
+        For each .txt file in config["ANNOTATIONS_PATH"]:
+        - Remove lines where label_id == deleted_idx
+        - Decrement label_id for lines where label_id > deleted_idx
+        
+        Args:
+            deleted_idx (int): The index of the label being deleted
+        
+        Returns:
+            tuple: (removed_count, shifted_count) - number of boxes removed and shifted
+        '''
+        annotations_path = config.get("ANNOTATIONS_PATH", "")
+        if not annotations_path or not os.path.exists(annotations_path):
+            print("Warning: Annotations path not set or doesn't exist")
+            return (0, 0)
+        
+        total_removed = 0
+        total_shifted = 0
+        
+        # Iterate through all .txt files in the annotations folder
+        for filename in os.listdir(annotations_path):
+            if not filename.endswith(".txt"):
+                continue
+            
+            filepath = os.path.join(annotations_path, filename)
+            removed, shifted = self.update_single_annotation_file(filepath, deleted_idx)
+            total_removed += removed
+            total_shifted += shifted
+        
+        print(f"Annotation update complete: {total_removed} removed, {total_shifted} shifted")
+        return (total_removed, total_shifted)
+
+    def update_single_annotation_file(self, filepath: str, deleted_idx: int) -> tuple:
+        '''
+        Update a single annotation file after a label is deleted.
+        
+        - Removes lines where label_id == deleted_idx
+        - Decrements label_id for lines where label_id > deleted_idx
+        
+        Args:
+            filepath (str): Path to the annotation .txt file
+            deleted_idx (int): The index of the label being deleted
+        
+        Returns:
+            tuple: (removed_count, shifted_count) for this file
+        '''
+        removed_count = 0
+        shifted_count = 0
+        updated_lines = []
+        
+        try:
+            with open(filepath, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    parts = line.split()
+                    if len(parts) >= 5:
+                        try:
+                            label_id = int(parts[0])
+                            
+                            if label_id == deleted_idx:
+                                # Remove this annotation
+                                removed_count += 1
+                                continue
+                            elif label_id > deleted_idx:
+                                # Shift index down by 1
+                                parts[0] = str(label_id - 1)
+                                shifted_count += 1
+                            
+                            # Keep this line (possibly modified)
+                            updated_lines.append("\t".join(parts))
+                        except ValueError:
+                            # Keep malformed lines as-is
+                            updated_lines.append(line)
+                    else:
+                        # Keep malformed lines as-is
+                        updated_lines.append(line)
+            
+            # Write back the updated content
+            with open(filepath, 'w') as f:
+                for line in updated_lines:
+                    f.write(line + "\n")
+                    
+        except Exception as e:
+            print(f"Error updating annotation file {filepath}: {e}")
+        
+        return (removed_count, shifted_count)
 
     def save_labels_to_yaml(self):
         '''
