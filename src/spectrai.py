@@ -3,6 +3,7 @@
 from ui.main_ui import Ui_MainWindow
 from ui.canvas_widget import CanvasWidget
 from ui.label_editor_dialog import LabelEditorDialog
+from ui.label_new_dialog import LabelNewDialog
 from tools.image_loader import ImageManager
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
@@ -79,6 +80,8 @@ class App(QMainWindow):
         
         # initialize mode to BOX and cursor to crosshair for drawing
         self.on_edit_mode_toggled(True)
+
+        self.ui.addBtn.clicked.connect(self.on_add_label_clicked)
 
     
     def wrapper_default_downloader(self):
@@ -673,9 +676,9 @@ class App(QMainWindow):
         
         # Get all boxes - skip saving if empty to avoid overwriting existing annotations
         boxes = self.ui.spectroPanel.box_manager.get_all_boxes()
-        if not boxes:
-            print("No annotations to save, skipping to preserve existing file")
-            return False
+        # if not boxes:
+        #     print("No annotations to save, skipping to preserve existing file")
+        #     return False
         
         # Get image dimensions for normalization
         img_width = self.image_manager.original_width
@@ -918,6 +921,14 @@ class App(QMainWindow):
         
         super().keyPressEvent(event)
 
+    def on_add_label_clicked(self):
+        dialog = LabelNewDialog(self)
+        dialog.exec_()
+        result, new_name = dialog.get_result()
+        if result == "accept":
+            config["LABELS"].append(new_name)
+            self.update_label_buttons()
+            self.save_labels_to_yaml()
 
 if __name__ == "__main__":
     import sys
