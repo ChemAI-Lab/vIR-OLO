@@ -477,7 +477,7 @@ class App(QMainWindow):
             with open(dataset_yaml_path, 'w') as file:
                 yaml.dump(dataset_config, file, default_flow_style=False, sort_keys=False)
             
-            print(f"Labels saved to: {dataset_yaml_path}")
+            # print(f"Labels saved to: {dataset_yaml_path}")
             return True
             
         except Exception as e:
@@ -711,7 +711,7 @@ class App(QMainWindow):
                 # Write in YOLO format: label_id x_center y_center width height
                 f.write(f"{box.label_id}\t{x_center:.6f}\t{y_center:.6f}\t{norm_width:.6f}\t{norm_height:.6f}\n")
         
-        print(f"Saved {len(boxes)} annotations to: {annotation_path}")
+        # print(f"Saved {len(boxes)} annotations to: {annotation_path}")
         return True
 
     def load_annotations_for_current_image(self):
@@ -782,7 +782,7 @@ class App(QMainWindow):
                         continue
         
         if boxes_loaded > 0:
-            print(f"Loaded {boxes_loaded} annotations from: {annotation_path}")
+            # print(f"Loaded {boxes_loaded} annotations from: {annotation_path}")
             self.ui.spectroPanel.update()
         
         return boxes_loaded > 0

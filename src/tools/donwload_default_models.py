@@ -18,15 +18,6 @@ class ModelManager():
                 'repo_id': self.repo_id,
                 'filename': "spectrai_ultralytics_ir.pt"
             },
-            {
-                'url': hf_hub_url(
-                    repo_id=self.repo_id,
-                    filename="spectrai_custom_ir_nubby.pt",
-                    revision="main"
-                ),
-                'repo_id': self.repo_id,
-                'filename': "spectrai_custom_ir_nubby.pt"
-            }
         ]
         
 

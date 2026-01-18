@@ -9,7 +9,7 @@ val: images/val
 # test: images/test  # optional
 
 # Number of classes (redundant if names dict length matches)
-nc: 12
+nc: 3
 
 # Class names mapping (index: name)
 names:
