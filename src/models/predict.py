@@ -101,11 +101,18 @@ class PredictorManager:
 	def __call__(self, image_path: str):
 		"""
 		Loads a YOLO model from model_path, runs prediction on image_path, and returns results[0].
+		Remaps the predicted class indices to config["LABELS"] indices.
 		"""
 		from ultralytics import YOLO
 		model = YOLO(self.pt_file)
 		results = model(image_path)
 		formatted_results = self.reformat_results(results[0])
+		# Always recalculate mapping to reflect current config["LABELS"]
+		indexes = self.map_indexes()
+		index_map = {m['ORIGINAL_IDX']: m['MAPPED_IDX'] for m in indexes}
+		for box in formatted_results:
+			original_idx = box['idx']
+			box['idx'] = index_map.get(original_idx, original_idx)
 		return formatted_results
 
 if __name__ == "__main__":
