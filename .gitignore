@@ -4,3 +4,4 @@ Ignore_*/
 *.egg-info/
 Test_project*/
 images*/
+Model_card.md
