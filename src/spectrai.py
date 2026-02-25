@@ -29,6 +29,7 @@ class App(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self._apply_press_style_to_existing_buttons()
         self.setWindowTitle("vIR-OLO v.1.0.0")
         # Set default value for CurrentModelLabel
         self.ui.CurrentModelLabel.setText("")
@@ -100,6 +101,34 @@ class App(QMainWindow):
 
         # Connect predictBtn to prediction handler
         self.ui.predictBtn.clicked.connect(self.on_click_predict)
+
+    def _apply_press_style_to_button(self, button: QPushButton):
+        """
+        Add a visible pressed/checked feedback style to a QPushButton.
+        """
+        press_feedback_style = """
+QPushButton {
+    border: 1px solid transparent;
+}
+QPushButton:pressed {
+    padding-left: 3px;
+    padding-top: 3px;
+    border: 3px inset rgb(90, 90, 90);
+    background-color: rgba(0, 0, 0, 28);
+}
+QPushButton:checked {
+    border: 3px solid rgb(90, 110, 90);
+    background-color: rgba(130, 160, 130, 120);
+}
+"""
+        button.setStyleSheet(f"{button.styleSheet()}\n{press_feedback_style}")
+
+    def _apply_press_style_to_existing_buttons(self):
+        """
+        Apply press feedback styling to all buttons created in the static UI.
+        """
+        for button in self.findChildren(QPushButton):
+            self._apply_press_style_to_button(button)
     
     def update_statusLabel(self, message: str):
         """
@@ -338,6 +367,7 @@ class App(QMainWindow):
             label_button.setObjectName(f"labelButton_{i}")
             label_button.setCheckable(True)
             label_button.clicked.connect(lambda checked, idx=i: self.on_label_button_clicked(idx))
+            self._apply_press_style_to_button(label_button)
             label_layout.addWidget(label_button)
             
             # Create edit button
@@ -349,6 +379,7 @@ class App(QMainWindow):
             edit_button.setObjectName(f"editButton_{i}")
             # Connect edit button - pass the label_button reference directly
             edit_button.clicked.connect(lambda checked, btn=label_button, idx=i: self.on_edit_label_clicked(btn,idx))
+            self._apply_press_style_to_button(edit_button)
             label_layout.addWidget(edit_button)
             
             # Set stretch to make label button take more space
