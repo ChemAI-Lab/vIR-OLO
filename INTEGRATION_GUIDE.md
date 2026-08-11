@@ -7,7 +7,7 @@ into the main spectrAI application.
 
 FILE STRUCTURE:
 ===============
-src/ui/
+src/virolo/ui/
 ├── bounding_box.py       (NEW - BoundingBox class)
 ├── box_manager.py        (NEW - BoxManager class)
 ├── canvas_widget.py      (NEW - CanvasWidget class)
@@ -17,7 +17,7 @@ src/ui/
 INTEGRATION STEPS:
 ==================
 
-1. Update src/ui/__init__.py to export new classes:
+1. Update src/virolo/ui/__init__.py to export new classes:
    -----------------------------------------------
    from .canvas_widget import CanvasWidget
    from .box_manager import BoxManager
@@ -26,7 +26,7 @@ INTEGRATION STEPS:
    __all__ = ['CanvasWidget', 'BoxManager', 'BoundingBox']
 
 
-2. In src/spectrai.py, replace QLabel with CanvasWidget:
+2. In src/virolo/spectrai.py, replace QLabel with CanvasWidget:
    -------------------------------------------------------
    
    BEFORE (current approach):
@@ -36,7 +36,7 @@ INTEGRATION STEPS:
    
    AFTER (new approach):
    ```python
-   from ui.canvas_widget import CanvasWidget
+   from .ui.canvas_widget import CanvasWidget
    
    # Replace the spectroPanel creation in initialize_image_manager
    self.ui.spectroPanel = CanvasWidget()

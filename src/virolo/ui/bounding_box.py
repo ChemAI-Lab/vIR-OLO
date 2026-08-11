@@ -8,7 +8,7 @@ in image-relative coordinates, and BoxManager which manages collections of bound
 from PyQt5.QtGui import QPen, QColor, QFont
 from PyQt5.QtCore import QRect
 import uuid
-from constants import *
+from ..constants import *
 
 class BoundingBox:
     """

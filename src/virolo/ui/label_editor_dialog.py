@@ -6,7 +6,7 @@ functionality for editing or deleting annotation labels.
 """
 
 from PyQt5.QtWidgets import QDialog, QMessageBox, QPushButton
-from ui.label_edit import Ui_Dialog
+from .label_edit import Ui_Dialog
 
 
 class LabelEditorDialog(QDialog):

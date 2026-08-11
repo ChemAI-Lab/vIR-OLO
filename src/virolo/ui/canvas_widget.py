@@ -21,7 +21,7 @@ from PyQt5.QtGui import QMouseEvent, QPainter, QPen, QColor, QFont, QCursor
 from typing import Optional, Tuple
 from .bounding_box import BoundingBox
 from .box_manager import BoxManager
-from constants import config
+from ..constants import config
 
 
 class CanvasWidget(QLabel):
