@@ -1,7 +1,16 @@
 .venv*
 __pycache__/
 Ignore_*/
+# Packaging artifacts (python -m build / setuptools)
 *.egg-info/
+.eggs/
+*.egg
+build/
+dist/
+MANIFEST
+
+# PyPI upload credentials (twine) -- contains API tokens, never commit
+.pypirc
 Test_project*/
 images*/
 Model_card.md

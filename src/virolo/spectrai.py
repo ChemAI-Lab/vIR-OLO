@@ -1,24 +1,24 @@
 ''' The main integration of GUI with the utilities and auxiliary files needed to run spectrAI'''
 
 import sys
-from ui.main_ui import Ui_MainWindow
-from ui.canvas_widget import CanvasWidget
-from ui.label_editor_dialog import LabelEditorDialog
-from ui.label_new_dialog import LabelNewDialog
-from tools.image_loader import ImageManager
+from .ui.main_ui import Ui_MainWindow
+from .ui.canvas_widget import CanvasWidget
+from .ui.label_editor_dialog import LabelEditorDialog
+from .ui.label_new_dialog import LabelNewDialog
+from .tools.image_loader import ImageManager
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QColorDialog, QMessageBox, QShortcut, QHBoxLayout
 from PyQt5 import QtGui, QtCore
-from constants import *
-from tools.donwload_default_models import ModelManager
+from .constants import *
+from .tools.donwload_default_models import ModelManager
 import os
 import json
 import yaml
 import shutil
 import time
 # from ultralytics import YOLO
-from models.predict import PredictorManager
+from .models.predict import PredictorManager
 
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)

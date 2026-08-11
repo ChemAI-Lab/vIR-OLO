@@ -19,7 +19,7 @@ Example usage:
 """
 import os
 # from ultralytics import YOLO
-from constants import config
+from ..constants import config
 import yaml
 
 

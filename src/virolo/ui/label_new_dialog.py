@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QDialog, QMessageBox
-from ui.label_new import Ui_Dialog
+from .label_new import Ui_Dialog
 
 class LabelNewDialog(QDialog):
     def __init__(self, parent=None):

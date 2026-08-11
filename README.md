@@ -31,7 +31,7 @@ The application provides a complete PyQt5-based GUI for creating YOLO-format ann
 - **Load pre-trained YOLO models** from Hugging Face or local filesystem
 - **One-click prediction** on loaded spectra images
 - **Automatic label merging** when integrating models with different label sets
-- **Default model downloader** from Hugging Face repository (`UrielGC/spectrai-IR-YOLO`)
+- **Default model downloader** from the Hugging Face repositories `ChemAI-Lab/vIR-OLO-10FG`, `ChemAI-Lab/vIR-OLO-12FG` and `ChemAI-Lab/vIR-OLO-13FG`
 - **Hybrid annotation**: Combine AI predictions with manual corrections
 
 ### User Interface
@@ -109,7 +109,13 @@ pip3 install torch torchvision
 
 ### Step 3: Install vIR-OLO
 
-With your virtual environment **activated** and inside the repository directory:
+From PyPI:
+
+```bash
+pip install virolo
+```
+
+Or, for development, with your virtual environment **activated** and inside the repository directory:
 
 ```bash
 pip install -e .
@@ -130,8 +136,18 @@ This will install all required dependencies including:
 
 ### 1. Launch the Application
 
+Installing the package puts a `virolo` command on your PATH:
+
 ```bash
-python main.py
+virolo
+```
+
+Equivalent alternatives:
+
+```bash
+python -m virolo     # same entry point, useful when PATH is not set up
+python main.py       # runs straight from a checkout, no install needed
+virolo --version     # print the version and exit
 ```
 
 ### 2. Create a New Project
@@ -174,33 +190,36 @@ python main.py
 
 ```
 vIR-OLO/
-├── main.py                          # Application entry point
-├── pyproject.toml                   # Project configuration and dependencies
+├── main.py                          # Development launcher (runs without installing)
+├── pyproject.toml                   # Project configuration, dependencies, `virolo` entry point
 ├── README.md                        # This file
 ├── INTEGRATION_GUIDE.md            # Integration documentation
 ├── logo/                           # Application logo assets
-└── src/                            # Source code
-    ├── __init__.py
-    ├── constants.py                # Global configuration dictionary
-    ├── dataset.yaml                # Label definitions template
-    ├── spectrai.py                 # Main application controller (App class)
-    ├── models/
-    │   ├── __init__.py
-    │   └── predict.py              # PredictorManager for YOLO inference
-    ├── tools/
-    │   ├── __init__.py
-    │   ├── image_loader.py         # ImageManager for image loading & transformations
-    │   └── donwload_default_models.py  # ModelManager for Hugging Face downloads
-    └── ui/
-        ├── __init__.py
-        ├── main_ui.py              # Auto-generated UI code from Qt Designer
-        ├── main.ui                 # Qt Designer UI definition
-        ├── canvas_widget.py        # Interactive annotation canvas (CanvasWidget)
-        ├── box_manager.py          # BoxManager for annotation storage
-        ├── bounding_box.py         # BoundingBox data class
-        ├── label_editor_dialog.py  # Label editing dialog
-        ├── label_new_dialog.py     # New label creation dialog
-        └── icons/                  # UI icon assets
+└── src/                            # Source code (src layout)
+    └── virolo/                     # The installable package
+        ├── __init__.py             # Package metadata (__version__)
+        ├── __main__.py             # Supports `python -m virolo`
+        ├── cli.py                  # `virolo` console script entry point
+        ├── constants.py            # Global configuration dictionary
+        ├── dataset.yaml            # Label definitions template
+        ├── spectrai.py             # Main application controller (App class)
+        ├── models/
+        │   ├── __init__.py
+        │   └── predict.py          # PredictorManager for YOLO inference
+        ├── tools/
+        │   ├── __init__.py
+        │   ├── image_loader.py     # ImageManager for image loading & transformations
+        │   └── donwload_default_models.py  # ModelManager for Hugging Face downloads
+        └── ui/
+            ├── __init__.py
+            ├── main_ui.py          # Auto-generated UI code from Qt Designer
+            ├── main.ui             # Qt Designer UI definition
+            ├── canvas_widget.py    # Interactive annotation canvas (CanvasWidget)
+            ├── box_manager.py      # BoxManager for annotation storage
+            ├── bounding_box.py     # BoundingBox data class
+            ├── label_editor_dialog.py  # Label editing dialog
+            ├── label_new_dialog.py # New label creation dialog
+            └── icons/              # UI icon assets
 ```
 
 ---
@@ -211,27 +230,27 @@ vIR-OLO/
 
 **vIR-OLO** follows a modular architecture with clear separation of concerns:
 
-1. **Application Layer** ([spectrai.py](src/spectrai.py))
+1. **Application Layer** ([spectrai.py](src/virolo/spectrai.py))
    - Main `App` class coordinates all components
    - Manages project lifecycle and user interactions
    - Connects UI signals to business logic
 
-2. **Image Management** ([image_loader.py](src/tools/image_loader.py))
+2. **Image Management** ([image_loader.py](src/virolo/tools/image_loader.py))
    - `ImageManager` handles image loading and display
    - Manages coordinate transformations between screen and image space
    - Maintains scaling metadata for accurate annotation positioning
 
-3. **Annotation Management** ([box_manager.py](src/ui/box_manager.py), [bounding_box.py](src/ui/bounding_box.py))
+3. **Annotation Management** ([box_manager.py](src/virolo/ui/box_manager.py), [bounding_box.py](src/virolo/ui/bounding_box.py))
    - `BoxManager` stores collections of bounding boxes per image
    - `BoundingBox` represents individual annotations
    - Converts between YOLO format (normalized) and pixel coordinates
 
-4. **Model Inference** ([predict.py](src/models/predict.py))
+4. **Model Inference** ([predict.py](src/virolo/models/predict.py))
    - `PredictorManager` runs YOLO model predictions
    - Maps model labels to workspace labels
    - Converts inference results to annotation format
 
-5. **UI Layer** ([canvas_widget.py](src/ui/canvas_widget.py), [main_ui.py](src/ui/main_ui.py))
+5. **UI Layer** ([canvas_widget.py](src/virolo/ui/canvas_widget.py), [main_ui.py](src/virolo/ui/main_ui.py))
    - `CanvasWidget` provides interactive annotation canvas
    - Real-time drawing preview and box selection
    - PyQt5-based modern interface
@@ -305,7 +324,10 @@ This project is available for research and educational purposes. Please contact 
 
 - Built with [PyQt5](https://www.riverbankcomputing.com/software/pyqt/) for the GUI framework
 - Powered by [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) for object detection
-- Default models hosted on [Hugging Face](https://huggingface.co/UrielGC/spectrai-IR-YOLO)
+- Default models hosted on Hugging Face under the [ChemAI-Lab](https://huggingface.co/ChemAI-Lab) organization:
+  - [vIR-OLO-10FG](https://huggingface.co/ChemAI-Lab/vIR-OLO-10FG/tree/main) — `vIR-OLO-10FG.pt` + `dataset.yaml`
+  - [vIR-OLO-12FG](https://huggingface.co/ChemAI-Lab/vIR-OLO-12FG/tree/main) — `vIR-OLO-12FG.pt` + `dataset.yaml`
+  - [vIR-OLO-13FG](https://huggingface.co/ChemAI-Lab/vIR-OLO-13FG/tree/main) — `vIR-OLO-13FG.pt` + `dataset.yaml`
 
 ---
 

@@ -10,23 +10,32 @@ class ModelManager():
         self.models_custom = [
             {
                 'url': hf_hub_url(
-                    repo_id="UrielGC/spectrai-IR-YOLO-10FG",
-                    filename="spectrai_ultralytics_IR_10FG.pt",
+                    repo_id="ChemAI-Lab/vIR-OLO-10FG",
+                    filename="vIR-OLO-10FG.pt",
                     revision="main"
                 ),
-                'repo_id': "UrielGC/spectrai-IR-YOLO-10FG",
-                'filename': "spectrai_ultralytics_IR_10FG.pt"
+                'repo_id': "ChemAI-Lab/vIR-OLO-10FG",
+                'filename': "vIR-OLO-10FG.pt"
             },
             {
                 'url': hf_hub_url(
-                    repo_id="UrielGC/spectrai-IR-YOLO-12FG",
-                    filename="spectrai_ultralytics_IR_12FG.pt",
+                    repo_id="ChemAI-Lab/vIR-OLO-12FG",
+                    filename="vIR-OLO-12FG.pt",
                     revision="main"
                 ),
-                'repo_id': "UrielGC/spectrai-IR-YOLO-12FG",
-                'filename': "spectrai_ultralytics_IR_12FG.pt"
+                'repo_id': "ChemAI-Lab/vIR-OLO-12FG",
+                'filename': "vIR-OLO-12FG.pt"
             },
-            
+            {
+                'url': hf_hub_url(
+                    repo_id="ChemAI-Lab/vIR-OLO-13FG",
+                    filename="vIR-OLO-13FG.pt",
+                    revision="main"
+                ),
+                'repo_id': "ChemAI-Lab/vIR-OLO-13FG",
+                'filename': "vIR-OLO-13FG.pt"
+            },
+
         ]
         
 

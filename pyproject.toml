@@ -6,9 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "virolo"
 version = "1.0.0"
 description = "A PyQt5-based spectral image annotation tool"
+readme = "README.md"
+# `str | Path` annotations in tools/donwload_default_models.py need 3.10+
+requires-python = ">=3.10"
+# TODO before the first PyPI upload: fill in `authors` and `license`.
 dependencies = [
     "PyQt5",
-    "Pillow", 
+    "Pillow",
     "opencv-python",
     "numpy",
     "PyYAML",
@@ -16,3 +20,17 @@ dependencies = [
     "requests",
     "ultralytics",
 ]
+
+[project.urls]
+Homepage = "https://github.com/UGarCil/vIR-OLO"
+Issues = "https://github.com/UGarCil/vIR-OLO/issues"
+
+[project.scripts]
+virolo = "virolo.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["virolo*"]
+
+[tool.setuptools.package-data]
+virolo = ["dataset.yaml", "ui/icons/*.png", "ui/*.ui"]
